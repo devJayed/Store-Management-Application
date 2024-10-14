@@ -14,19 +14,11 @@ const ManageSubsubCategory = () => {
   const axiosPublic = useAxiosPublic();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [subsubcategory, setSubsubcategory] = useState("");
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState("");
+  const [selectedSubcategoryName, setSelectedSubcategoryName] = useState("");
 
   if (isPending) {
     return <div className="text-3xl text-center mt-24">Loading...</div>;
   }
-
-  //Join table and find
-  const findingSubcategory = (subCategoryId) => {
-    const matchSubcategory = subcategories.find(
-      (subcategory) => subcategory._id === subCategoryId
-    );
-    return matchSubcategory ? matchSubcategory.name : "Not Set"; // Handle null/undefined case
-  };
 
   // Handle Delete
   const handleDeleteItem = (item) => {
@@ -65,12 +57,16 @@ const ManageSubsubCategory = () => {
   // Close the modal
   const closeModal = () => {
     setIsModalOpen(false);
-    setSelectedSubcategoryId(""); // Reset the category input
+    setSelectedSubcategoryName(""); // Reset the category input
     setSubsubcategory(""); // Reset the subcategory input
   };
   // Handle Create Subcategory
   const handleCreateSubsubcategory = async () => {
-    // console.log("Form submitted Data: ", subsubcategory, selectedSubcategoryId);
+    console.log(
+      "Form submitted Data: ",
+      subsubcategory,
+      selectedSubcategoryName
+    );
     if (!subsubcategory.trim()) {
       return Swal.fire({
         icon: "warning",
@@ -82,7 +78,7 @@ const ManageSubsubCategory = () => {
     try {
       const response = await axiosPublic.post("/subsubcategory", {
         name: subsubcategory,
-        subCategoryId: selectedSubcategoryId,
+        subcategoryName: selectedSubcategoryName,
       });
       if (response.data.acknowledged) {
         refetch(); // Refetch to update the UI with the new category
@@ -151,13 +147,13 @@ const ManageSubsubCategory = () => {
                     <span className="label-text">Subcategory*</span>
                   </div>
                   <select
-                    value={selectedSubcategoryId} // Bind the state to the select element
-                    onChange={(e) => setSelectedSubcategoryId(e.target.value)} // Update the state on change
+                    value={selectedSubcategoryName} // Bind the state to the select element
+                    onChange={(e) => setSelectedSubcategoryName(e.target.value)} // Update the state on change
                     className="textarea textarea-bordered"
                   >
                     <option value="">Select Subcategory</option>
                     {subcategories.map((subcategory) => (
-                      <option key={subcategory._id} value={subcategory._id}>
+                      <option key={subcategory._id} value={subcategory.name}>
                         {subcategory.name}
                       </option>
                     ))}
@@ -205,8 +201,7 @@ const ManageSubsubCategory = () => {
                 >
                   <td>{index + 1}</td>
                   <td>{item.name}</td>
-                  {/* Find the subcategory name based on the subCategoryId -- Join table */}
-                  <td>{findingSubcategory(item.subCategoryId)}</td>
+                  <td>{item.subcategoryName}</td>
                   {/* Edit button  */}
                   <td>
                     <Link to={`/dashboard/update-subsubcategory/${item._id}`}>

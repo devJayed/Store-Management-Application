@@ -88,7 +88,7 @@ async function run() {
       const productQuantityNum = parseInt(productQuantity, 10); // Integer for quantity
 
       // Debug: Check converted values
-      console.log(costRMBNum, rmbRateNum, transportCostNum, productQuantityNum);
+      // console.log(costRMBNum, rmbRateNum, transportCostNum, productQuantityNum);
 
       // Perform the calculation
       const result =
@@ -125,7 +125,7 @@ async function run() {
 
         // Generate the product code
         const productCode = await generateProductCode();
-        console.log("Product Code", productCode);
+        // console.log("Product Code", productCode);
 
         // Product Cost Calculation
         const productCost = await productCostCalculation(
@@ -137,7 +137,7 @@ async function run() {
 
         const productPrice = (parseInt(productCost) * 1.1).toFixed(2);
 
-        console.log(productPrice);
+        // console.log(productPrice);
 
         // Create the new product object
         const newProduct = {
@@ -157,7 +157,7 @@ async function run() {
           productPrice,
         };
 
-        console.log(newProduct);
+        // console.log(newProduct);
 
         // Insert the new product into the collection
         const result = await productCollection.insertOne(newProduct);
@@ -238,11 +238,12 @@ async function run() {
       res.send(result);
     });
     // Search subcategory item
-    app.get("/subcategory2/:categoryId", async (req, res) => {
-      const categoryId = req.params.categoryId;
-      // Since categoryId is stored as a string, do not use ObjectId
-      const query = { categoryId: categoryId }; // Compare as string
-      const result = await subCategoryCollection.find(query).toArray();
+    app.get("/subcategory2/:categoryName", async (req, res) => {
+      const { categoryName } = req.params;
+      // console.log("categoryName:",categoryName);
+      const result = await subCategoryCollection
+        .find({ categoryName })
+        .toArray();
       res.send(result);
     });
     //Delete subcategory item
@@ -254,15 +255,15 @@ async function run() {
     });
     // Edit subcategory
     app.patch("/subcategory/:id", async (req, res) => {
-      const item = req.body;
-      console.log(item);
+      const { name, categoryName } = req.body;
+      // console.log(name, categoryName);
       const id = req.params.id;
-      const categoryId = req.params.categoryId;
       const filter = { _id: new ObjectId(id) };
+      // console.log(filter);
       const updateDoc = {
         $set: {
-          name: item.name,
-          categoryId: item.categoryId,
+          name: name,
+          categoryName: categoryName,
         },
       };
       const result = await subCategoryCollection.updateOne(filter, updateDoc);
@@ -286,15 +287,16 @@ async function run() {
       const id = req.params.subCategoryId;
       // const query = { subCategoryId: new ObjectId(id) }; // subCategoryId
       const query = { _id: new ObjectId(id) }; // _id
-      console.log(id);
+      // console.log(id);
       const result = await subSubCategoryCollection.find(query).toArray();
       res.send(result);
     });
     //Find subsubcategory on specific id (subCategoryId)
-    app.get("/subsubcategory2/:subCategoryId", async (req, res) => {
-      const subCategoryId = req.params.subCategoryId;
-      const query = { subCategoryId: subCategoryId };
-      const result = await subSubCategoryCollection.find(query).toArray();
+    app.get("/subsubcategory2/:subcategoryName", async (req, res) => {
+      const { subcategoryName } = req.params;
+      const result = await subSubCategoryCollection
+        .find({ subcategoryName })
+        .toArray();
       res.send(result);
     });
     //Delete subsubcategory item
@@ -307,13 +309,13 @@ async function run() {
     // Edit subcategory
     app.patch("/subsubcategory/:id", async (req, res) => {
       const item = req.body;
-      console.log(item);
+      // console.log(item);
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
           name: item.name,
-          subCategoryId: item.subCategoryId,
+          subcategoryName: item.subcategoryName,
         },
       };
       const result = await subSubCategoryCollection.updateOne(

@@ -17,20 +17,21 @@ const UpdateSubcategory = () => {
   const [categories] = useCategories();
 
   const subcategory = useLoaderData();
-  const { _id: id, name, categoryId } = subcategory?.[0] || {};
-  //   console.log(id, name, categoryId);
+  const { _id: id, name, categoryName } = subcategory?.[0] || {};
+  // console.log(id, name, categoryName);
 
-  const findingCategory = (categoryId) => {
-    const matchCategory = categories.find(
-      (category) => category._id === categoryId
-    );
-    return matchCategory?.name;
-  };
+  // const findingCategory = (categoryId) => {
+  //   const matchCategory = categories.find(
+  //     (category) => category._id === categoryId
+  //   );
+  //   return matchCategory?.name;
+  // };
 
   const onSubmit = async (data) => {
+    // console.log("Form submitted data: ", data);
     const subcategoryItem = {
       name: data.name,
-      categoryId: data.category,
+      categoryName: data.categoryName,
     };
     try {
       const Response = await axiosPublic.patch(
@@ -98,8 +99,7 @@ const UpdateSubcategory = () => {
             <input
               type="text"
               disabled
-              //   defaultValue={findingCategory(categoryId)} -- id to name
-              defaultValue={findingCategory(categoryId)}
+              defaultValue={categoryName}
               className="input input-bordered w-full"
             />
           </div>
@@ -109,19 +109,21 @@ const UpdateSubcategory = () => {
               <span className="label-text">Change Category*</span>
             </div>
             <select
-              defaultValue={categoryId}
-              {...register("category")}
+              defaultValue={categoryName}
+              {...register("categoryName")}
               className="textarea textarea-bordered"
             >
               <option value="">Select Category</option>
-              {categories.map((category) => (
-                <option key={category._id} value={category._id}>
-                  {category.name}
+              {categories.map((item) => (
+                <option key={item._id} value={item.name}>
+                  {item.name}
                 </option>
               ))}
             </select>
-            {errors.category && (
-              <span className="text-red-500">{errors.category.message}</span>
+            {errors.categoryName && (
+              <span className="text-red-500">
+                {errors.categoryName.message}
+              </span>
             )}
           </div>
         </div>

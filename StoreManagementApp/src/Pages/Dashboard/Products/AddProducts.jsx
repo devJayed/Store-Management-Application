@@ -29,8 +29,8 @@ const AddProducts = () => {
   // Watch selected category and subcategory values from the form
   const selectedCategory = watch("category");
   const selectedSubCategory = watch("subCategory");
-  // console.log("selectedCategory:", selectedCategory);
-  // console.log("selectedSubCategory:", selectedSubCategory);
+  console.log("selectedCategory:", selectedCategory);
+  console.log("selectedSubCategory:", selectedSubCategory);
 
   // --++ Fetch category, subcategory and subsubcategory +--
   // Fetch categories when the component mounts
@@ -76,7 +76,7 @@ const AddProducts = () => {
 
   // Handle form submission
   const onSubmit = async (data) => {
-    // console.log("Form Submitted Data:", data);
+    console.log("Form Submitted Data:", data);
     reset();
 
     // Handling form data
@@ -137,7 +137,7 @@ const AddProducts = () => {
               >
                 <option value="">Select Category</option>
                 {categories.map((category) => (
-                  <option key={category._id} value={category._id}>
+                  <option key={category._id} value={category.name}>
                     {category.name}
                   </option>
                 ))}
@@ -159,7 +159,7 @@ const AddProducts = () => {
               >
                 <option value="">Select SubCategory</option>
                 {subCategories.map((subCategory) => (
-                  <option key={subCategory._id} value={subCategory._id}>
+                  <option key={subCategory._id} value={subCategory.name}>
                     {subCategory.name}
                   </option>
                 ))}

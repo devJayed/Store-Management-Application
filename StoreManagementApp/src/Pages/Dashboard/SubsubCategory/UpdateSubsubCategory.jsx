@@ -18,20 +18,13 @@ const UpdateSubsubCategory = () => {
   const [subcategories] = useSubcategory();
 
   const subsubcategories = useLoaderData();
-  const { _id: id, name, subCategoryId } = subsubcategories?.[0] || {};
-  console.log(id, name, subCategoryId);
-
-  const findingSubcategory = (subCategoryId) => {
-    const matchSubcategory = subcategories.find(
-      (subcategories) => subcategories._id === subCategoryId
-    );
-    return matchSubcategory?.name;
-  };
+  const { _id: id, name, subcategoryName } = subsubcategories?.[0] || {};
+  console.log(id, name, subcategoryName);
 
   const onSubmit = async (data) => {
     const subsubcategoryItem = {
       name: data.name,
-      subCategoryId: data.subCategoryId,
+      subcategoryName: data.subcategoryName,
     };
     try {
       const Response = await axiosPublic.patch(
@@ -98,8 +91,7 @@ const UpdateSubsubCategory = () => {
             <input
               type="text"
               disabled
-              //   defaultValue={findingCategory(categoryId)} -- id to name
-              defaultValue={findingSubcategory(subCategoryId)}
+              defaultValue={subcategoryName}
               className="input input-bordered w-full"
             />
           </div>
@@ -109,20 +101,20 @@ const UpdateSubsubCategory = () => {
               <span className="label-text">Change Subcategory*</span>
             </div>
             <select
-              defaultValue={subCategoryId}
-              {...register("subCategoryId")}
+              defaultValue={subcategoryName}
+              {...register("subcategoryName")}
               className="textarea textarea-bordered"
             >
               <option value="">Select Subcategory</option>
-              {subcategories.map((subcategory) => (
-                <option key={subcategory._id} value={subcategory._id}>
-                  {subcategory.name}
+              {subcategories.map((item) => (
+                <option key={item._id} value={item.value}>
+                  {item.name}
                 </option>
               ))}
             </select>
-            {errors.subCategoryId && (
+            {errors.subcategoryName && (
               <span className="text-red-500">
-                {errors.subCategoryId.message}
+                {errors.subcategoryName.message}
               </span>
             )}
           </div>

@@ -11,7 +11,7 @@ const Sales = () => {
   // Add a product to the sales list
   const addProductToSale = (product) => {
     setSelectedProducts([...selectedProducts, product]);
-    setTotalPrice(totalPrice + parseInt(product.productCost));
+    setTotalPrice(totalPrice + parseInt(product.productPrice));
   };
 
   // Handle the product search
@@ -38,7 +38,7 @@ const Sales = () => {
           </h2>
           <input
             type="text"
-            placeholder="Search product by brand"
+            placeholder="Search product by brand or category"
             value={searchTerm}
             onChange={handleSearch}
             className="input input-bordered w-full mb-4"
@@ -47,18 +47,23 @@ const Sales = () => {
           <h3 className="text-xl font-medium mb-2">Search Results:</h3>
           <ul className="space-y-2">
             {products
-              .filter(
-                (product) =>
-                  product.brand &&
-                  product.brand.toLowerCase().includes(searchTerm.toLowerCase())
-              )
+              .filter((product) => {
+                // Split the search term into words
+                const searchWords = searchTerm.toLowerCase().split(" ");
+                
+                // Check if every word is present in either the brand or subsubCategory
+                return searchWords.every((word) =>
+                  product.brand?.toLowerCase().includes(word) ||
+                  product.subsubCategory?.toLowerCase().includes(word)
+                );
+              })
               .map((product) => (
                 <li
                   key={product._id}
                   className="flex justify-between items-center bg-gray-100 p-2 rounded-md"
                 >
                   <span>
-                    {product.brand} - ${product.productPrice}
+                    {product.subsubCategory} - {product.brand} - ${product.productPrice}
                   </span>
                   <button
                     className="btn btn-sm btn-primary"

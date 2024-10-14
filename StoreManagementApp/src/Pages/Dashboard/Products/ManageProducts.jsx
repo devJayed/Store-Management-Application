@@ -2,16 +2,12 @@ import React, { useEffect, useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { MdDelete } from "react-icons/md";
 import { Link } from "react-router-dom";
-import useCategories from "../../../Hooks/useCategories";
-import useSubcategory from "../../../Hooks/useSubcategory";
 import SectionTitle from "../../../Components/SectionTitle/SectionTitle";
 import { useQuery } from "@tanstack/react-query";
 import Swal from "sweetalert2";
 import useAxiosPublic from "../../../Hooks/useAxiosPublic";
 
 const ManageProducts = () => {
-  const [categories] = useCategories();
-  const [subcategories] = useSubcategory();
   const axiosPublic = useAxiosPublic();
 
   // Fetch products when the component mounts
@@ -44,21 +40,6 @@ const ManageProducts = () => {
   if (isLoading) {
     return <div className="text-3xl text-center mt-24">Loading...</div>;
   }
-  // Join subCategory and Category collection and find categoryName from categoryId
-  const findingCategory = (categoryId) => {
-    const matchCategory = categories.find(
-      (category) => category._id === categoryId
-    );
-    return matchCategory ? matchCategory.name : "Not Set"; // Handle null/undefined case
-  };
-
-  // Join table and find subcategory name from subCategoryId
-  const findingSubcategory = (subCategoryId) => {
-    const matchSubcategory = subcategories.find(
-      (subcategory) => subcategory._id === subCategoryId
-    );
-    return matchSubcategory ? matchSubcategory.name : "Not Set"; // Handle null/undefined case
-  };
 
   // Handle Delete
   const handleDeleteItem = (item) => {
@@ -132,10 +113,10 @@ const ManageProducts = () => {
                 >
                   <td className="border border-gray-300">{index + 1}</td>
                   <td className="border border-gray-300">
-                    {findingCategory(item.category)}
+                    {item.category}
                   </td>
                   <td className="border border-gray-300">
-                    {findingSubcategory(item.subCategory)}
+                    {item.subCategory}
                   </td>
                   <td className="border border-gray-300">
                     {item.subsubCategory}
