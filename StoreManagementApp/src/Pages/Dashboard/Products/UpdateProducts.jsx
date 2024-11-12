@@ -1,100 +1,40 @@
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import useAxiosPublic from "../../../Hooks/useAxiosPublic";
-import { FaPlusSquare } from "react-icons/fa";
-import Swal from "sweetalert2";
+import React, { useEffect, useState } from "react";
+import { useLoaderData, useNavigate } from "react-router-dom";
 import SectionTitle from "../../../Components/SectionTitle/SectionTitle";
-import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { FaPlusSquare } from "react-icons/fa";
+import useAxiosPublic from "../../../Hooks/useAxiosPublic";
+import Swal from "sweetalert2";
 
-const AddProducts = () => {
-  const [categories, setCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]);
-  const [subsubCategories, setSubsubCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
+const UpdateProducts = () => {
+  const [product] = useLoaderData();
+  // States for cost and price calculation
+  const [costRMB, setCostRMB] = useState(product?.costRMB);
+  const [rmbRate, setRmbRate] = useState(product?.rmbRate);
+  const [transportCost, setTransportCost] = useState(product?.transportCost);
+  const [productCost, setProductCost] = useState(product?.productCost);
+  const [productPrice, setProductPrice] = useState(product?.productPrice);
+  const axiosPublic = useAxiosPublic();
   const navigate = useNavigate();
-
-  // Initialize react-hook-form
+  // react form destructuring
   const {
     register,
     handleSubmit,
     reset,
-    watch,
-    setValue,
     formState: { errors },
   } = useForm();
-
-  // calling useAxiosPublic hook
-  const axiosPublic = useAxiosPublic();
-
-  // Watch selected category and subcategory values from the form
-  const selectedCategory = watch("category");
-  const selectedSubCategory = watch("subCategory");
-
-  // States for cost and price calculation
-  const [costRMB, setCostRMB] = useState(32);
-  const [rmbRate, setRmbRate] = useState(17);
-  const [transportCost, setTransportCost] = useState(50);
-  const [productCost, setProductCost] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-
-  // Category
-  useEffect(() => {
-    axiosPublic.get("/category").then((response) => {
-      setCategories(response.data);
-    });
-  }, []);
-  // subcategories
-  useEffect(() => {
-    if (selectedCategory) {
-      axiosPublic.get(`/subcategory2/${selectedCategory}`).then((response) => {
-        setSubCategories(response.data);
-        setSubsubCategories([]);
-        setValue("subCategory", "");
-        setValue("subsubCategory", "");
-      });
-    }
-  }, [selectedCategory, setValue]);
-  // sub-subcategories
-  useEffect(() => {
-    if (selectedSubCategory) {
-      axiosPublic
-        .get(`/subsubcategory2/${selectedSubCategory}`)
-        .then((response) => {
-          setSubsubCategories(response.data);
-          setValue("subSubCategory", "");
-        });
-    }
-  }, [selectedSubCategory, setValue]);
-  // brands
-  useEffect(() => {
-    axiosPublic.get("/brands").then((response) => {
-      setBrands(response.data);
-    });
-  }, []);
-
-  // Sort category,  subcategory and subsubcategory
-  // Sort categories alphabetically by name
-  const sortedCategories = [...categories].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-  // Sort subCategories by category name first, then by subcategory name
-  const sortedSubCategories = [...subCategories].sort((a, b) => {
-    const categoryComparison = a.categoryName.localeCompare(b.categoryName);
-    if (categoryComparison !== 0) {
-      return categoryComparison; // If categories are different, sort by category
-    }
-    return a.name.localeCompare(b.name); // If categories are the same, sort by subcategory name
-  });
-  // Sort subsubcategories by subcategory name first, then by subsubcategory name
-  const sortedSubsubcategories = [...subsubCategories].sort((a, b) => {
-    const subcategoryComparison = a.subcategoryName.localeCompare(
-      b.subcategoryName
-    );
-    if (subcategoryComparison !== 0) {
-      return subcategoryComparison;
-    }
-    return a.name.localeCompare(b.name);
-  });
+  // product destructuring
+  const {
+    _id: id,
+    category,
+    subCategory,
+    subsubCategory,
+    brand,
+    productCode,
+    inStock,
+    stockAlert,
+    date,
+  } = product;
 
   // Calculate Product Cost and Price
   const calculateProductCost = (costRMB, rmbRate, transportCost) => {
@@ -121,154 +61,123 @@ const AddProducts = () => {
     setProductPrice(calculateProductPrice(newProductCost));
   }, [costRMB, rmbRate, transportCost]);
 
-  // Check for duplicate product
-  const checkDuplicate = async (productDetails) => {
-    try {
-      const response = await axiosPublic.post(
-        "/products/check-duplicate",
-        productDetails
-      );
-      return response.data.duplicate;
-    } catch (error) {
-      console.error("Error checking duplicate:", error);
-      return false;
-    }
-  };
-  // Handle form submission
   const onSubmit = async (data) => {
-    const productDetails = {
-      category: data.category,
-      subCategory: data.subCategory,
-      subsubCategory: data.subsubCategory,
-      brand: data.brand,
-    };
-
-    const isDuplicate = await checkDuplicate(productDetails);
-
-    if (isDuplicate) {
-      return Swal.fire(
-        "Duplicate Product",
-        "This product already exists.",
-        "warning"
-      );
-    }
-
-    const ProductDetails = {
-      ...productDetails,
-      inStock: parseInt(data.productQuantity, 10), // Product quantity will be inStock
-      stockAlert: parseInt(data.stockAlert, 10),
-      costRMB: parseFloat(data.costRMB),
-      rmbRate: parseFloat(data.rmbRate),
-      transportCost: parseFloat(data.transportCost),
+    console.log("Form submitted data: ", data);
+    const product = {
+      inStock: parseInt(data?.inStock, 10),
+      productQuantity: parseInt(data?.productQuantity, 10),
+      stockAlert: parseInt(data?.stockAlert, 10),
+      costRMB: parseFloat(costRMB),
+      rmbRate: parseFloat(rmbRate),
+      transportCost: parseFloat(transportCost),
       productCost: parseFloat(productCost),
       productPrice: parseFloat(productPrice),
-      date: data.date,
+      date: data?.date,
     };
-
+    console.log(product);
     try {
-      const productRes = await axiosPublic.post("/products", ProductDetails);
-      if (productRes.data.insertedId) {
+      const Response = await axiosPublic.patch(`/product/${id}`, product);
+      console.log(Response.data.modifiedCount);
+      if (Response.data.modifiedCount > 0) {
+        // Show success popup
         Swal.fire({
           position: "top-end",
           icon: "success",
-          title: `${data.category} is added successfully.`,
+          title: "The product is updated successfully.",
           showConfirmButton: false,
           timer: 1500,
         });
+        // Reset the form fields
         reset();
         navigate("/dashboard/manage-products");
       }
     } catch (error) {
-      console.error("Error adding item:", error);
+      console.error("Error updating product:", error);
+      Swal.fire({
+        position: "top-end",
+        icon: "error",
+        title: `Failed to update the product. Please try again.`,
+        showConfirmButton: false,
+        timer: 1500,
+      });
     }
   };
-
   return (
-    <div>
-      <SectionTitle
-        subHeading="Provide all information about the new product"
-        heading="ADDING NEW PRODUCT"
-      />
+    <>
+      {/* Section Title */}
+      <div>
+        <SectionTitle
+          subHeading="Update the required fields of the product"
+          heading="UPDATING PRODUCT"
+        />
+      </div>
+      {/* Update form  */}
       <div className="p-16">
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* First row -- Category */}
           <div className="flex gap-x-4 mb-4">
+            {/* Product Category  */}
             <div className="form-control w-full">
-              <label className="label">
-                <span className="label-text">Category*</span>
-              </label>
-              <select
-                {...register("category")}
+              <div className="label">
+                <span className="label-text">Category</span>
+              </div>
+              <input
+                type="text"
                 className="textarea textarea-bordered"
-              >
-                <option value="">Select Category</option>
-                {sortedCategories.map((category) => (
-                  <option key={category._id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              {errors.category && (
-                <span className="text-red-500">{errors.category.message}</span>
-              )}
+                defaultValue={category}
+                disabled
+              />
             </div>
+            {/* Product Sub-category Dropdown  */}
             <div className="form-control w-full">
-              <label className="label">
-                <span className="label-text">Sub-category*</span>
-              </label>
-              <select
-                {...register("subCategory")}
+              <div className="label">
+                <span className="label-text">Subcategory</span>
+              </div>
+              <input
+                type="text"
                 className="textarea textarea-bordered"
-                disabled={!selectedCategory}
-              >
-                <option value="">Select SubCategory</option>
-                {sortedSubCategories.map((subCategory) => (
-                  <option key={subCategory._id} value={subCategory.name}>
-                    {subCategory.name}
-                  </option>
-                ))}
-              </select>
+                defaultValue={subCategory}
+                disabled
+              />
             </div>
+            {/* Product Sub-sub-category Dropdown  */}
             <div className="form-control w-full">
-              <label className="label">
-                <span className="label-text">Sub-subcategory*</span>
-              </label>
-              <select
-                {...register("subsubCategory")}
+              <div className="label">
+                <span className="label-text">Subsubategory</span>
+              </div>
+              <input
+                type="text"
                 className="textarea textarea-bordered"
-                disabled={!selectedSubCategory}
-              >
-                <option value="">Select Sub-subcategory</option>
-                {sortedSubsubcategories.map((subsubCategory) => (
-                  <option key={subsubCategory._id} value={subsubCategory.name}>
-                    {subsubCategory.name}
-                  </option>
-                ))}
-              </select>
+                defaultValue={subsubCategory}
+                disabled
+              />
             </div>
           </div>
           {/* Second Row  */}
           <div className="flex gap-x-4 mb-4">
             {/* Brands Dropdown  */}
-            <div className="form-control w-4/12">
+            <div className="form-control w-full">
               <div className="label">
-                <span className="label-text">Brands*</span>
+                <span className="label-text">Brand</span>
               </div>
-              <select
-                {...register("brand")}
-                defaultValue="" // Set defaultValue as the first brand or empty string
+              <input
+                type="text"
                 className="textarea textarea-bordered"
-              >
-                <option value="">Select Brand</option>
-                {brands.map((brand) => (
-                  <option key={brand._id} value={brand.name}>
-                    {brand.name}
-                  </option>
-                ))}
-              </select>
-              {errors.category && (
-                <span className="text-red-500">{errors.category.message}</span>
-              )}
+                defaultValue={brand}
+                disabled
+              />
+            </div>
+            {/* ProductCode (SKU) */}
+            <div className="form-control w-full">
+              <div className="label">
+                <span className="label-text">Product Code</span>
+              </div>
+              <input
+                type="text"
+                className="textarea textarea-bordered"
+                defaultValue={productCode}
+                disabled
+              />
             </div>
           </div>
           {/* Third Row  */}
@@ -280,9 +189,10 @@ const AddProducts = () => {
               </div>
               <input
                 type="number"
-                defaultValue={0}
-                disabled
-                className="textarea textarea-bordered"
+                defaultValue={inStock}
+                readOnly
+                className="textarea textarea-bordered bg-gray-100"
+                {...register("inStock")}
               />
             </div>
             {/* Product Quantity */}
@@ -456,7 +366,7 @@ const AddProducts = () => {
               )}
             </div>
           </div>
-          {/* Sixth Row  */}
+          {/* Sixth row  */}
           {/* Date */}
           <div className="form-control w-1/2">
             <div className="label">
@@ -466,7 +376,7 @@ const AddProducts = () => {
               type="date"
               {...register("date", {})}
               className="textarea textarea-bordered"
-              defaultValue={new Date().toISOString().split("T")[0]} // Set the current date as the default value
+              defaultValue={new Date().toISOString().split("T")[0]}
             />
             {errors.date && (
               <span className="text-red-500">{errors.date.message}</span>
@@ -475,13 +385,13 @@ const AddProducts = () => {
           {/* Submit Button */}
           <div>
             <button className="btn btn-active btn-ghost my-4" type="submit">
-              Submit <FaPlusSquare />
+              UPDATE <FaPlusSquare />
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </>
   );
 };
 
-export default AddProducts;
+export default UpdateProducts;

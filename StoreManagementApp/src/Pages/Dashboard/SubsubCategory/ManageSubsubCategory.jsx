@@ -17,8 +17,26 @@ const ManageSubsubCategory = () => {
   const [selectedSubcategoryName, setSelectedSubcategoryName] = useState("");
 
   if (isPending) {
-    return <div className="text-3xl text-center mt-24">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-2 mt-12">
+        <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-blue-500 border-solid"></div>
+        <p className="text-blue-500 text-lg font-semibold">
+          Loading sales data...
+        </p>
+      </div>
+    );
   }
+
+  // Sort subsubcategories by subcategory name first, then by subsubcategory name
+  const sortedSubsubcategories = [...subsubcategories].sort((a, b) => {
+    const subcategoryComparison = a.subcategoryName.localeCompare(
+      b.subcategoryName
+    );
+    if (subcategoryComparison !== 0) {
+      return subcategoryComparison;
+    }
+    return a.name.localeCompare(b.name);
+  });
 
   // Handle Delete
   const handleDeleteItem = (item) => {
@@ -62,15 +80,30 @@ const ManageSubsubCategory = () => {
   };
   // Handle Create Subcategory
   const handleCreateSubsubcategory = async () => {
-    console.log(
-      "Form submitted Data: ",
-      subsubcategory,
-      selectedSubcategoryName
-    );
+    // console.log(
+    //   "Form submitted Data: ",
+    //   subsubcategory,
+    //   selectedSubcategoryName
+    // );
     if (!subsubcategory.trim()) {
       return Swal.fire({
         icon: "warning",
         title: "Subcategory name is required!",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    }
+    // Check for duplicates
+    const isDuplicate = subsubcategories.some(
+      (item) =>
+        item.name === subsubcategory &&
+        item.subcategoryName === selectedSubcategoryName
+    );
+
+    if (isDuplicate) {
+      return Swal.fire({
+        icon: "warning",
+        title: "Sub-subcategory already exists!",
         showConfirmButton: false,
         timer: 1500,
       });
@@ -112,7 +145,7 @@ const ManageSubsubCategory = () => {
       </div>
 
       {/* Add Sub Subcategory button with modal */}
-      <div className="flex justify-end items-center mr-16">
+      <div className="flex justify-start items-center ml-16">
         <button onClick={openModal} className="btn btn-primary my-2">
           Add Sub Subcategory
         </button>
@@ -194,7 +227,7 @@ const ManageSubsubCategory = () => {
               </tr>
             </thead>
             <tbody>
-              {subsubcategories.map((item, index) => (
+              {sortedSubsubcategories.map((item, index) => (
                 <tr
                   key={item._id}
                   className={`${index % 2 === 0 ? "bg-blue-50" : "bg-gray-50"}`}

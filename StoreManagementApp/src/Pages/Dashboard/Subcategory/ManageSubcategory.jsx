@@ -19,8 +19,23 @@ const ManageSubcategory = () => {
   const [categories] = useCategories();
 
   if (isPending) {
-    return <div className="text-3xl text-center mt-24">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-2 mt-12">
+        <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-blue-500 border-solid"></div>
+        <p className="text-blue-500 text-lg font-semibold">
+          Loading sales data...
+        </p>
+      </div>
+    );
   }
+  // Sort subCategories by category name first, then by subcategory name
+  const sortedSubCategories = [...subcategories].sort((a, b) => {
+    const categoryComparison = a.categoryName.localeCompare(b.categoryName);
+    if (categoryComparison !== 0) {
+      return categoryComparison; // If categories are different, sort by category
+    }
+    return a.name.localeCompare(b.name); // If categories are the same, sort by subcategory name
+  });
   // Handle Delete
   const handleDeleteItem = (item) => {
     Swal.fire({
@@ -70,6 +85,21 @@ const ManageSubcategory = () => {
         timer: 1500,
       });
     }
+    // Check for duplicate subcategory in the selected category
+    const duplicate = subcategories.some(
+      (item) =>
+        item.name.toLowerCase() === subcategory.toLowerCase().trim() &&
+        item.categoryName === selectedCategoryName
+    );
+    if (duplicate) {
+      return Swal.fire({
+        icon: "warning",
+        title: `The subcategory "${subcategory}" already exists in "${selectedCategoryName}".`,
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    }
+    // If no duplicate, proceed with the creation
     try {
       const response = await axiosPublic.post("/subcategory", {
         name: subcategory,
@@ -107,7 +137,7 @@ const ManageSubcategory = () => {
       </div>
 
       {/* Add Subcategory button with modal */}
-      <div className="flex justify-end items-center mr-16">
+      <div className="flex justify-start items-center ml-16">
         <button onClick={openModal} className="btn btn-primary my-2">
           Add Subcategory
         </button>
@@ -190,7 +220,7 @@ const ManageSubcategory = () => {
               </tr>
             </thead>
             <tbody>
-              {subcategories.map((item, index) => (
+              {sortedSubCategories.map((item, index) => (
                 <tr
                   key={item._id}
                   className={`${index % 2 === 0 ? "bg-blue-50" : "bg-gray-50"}`}

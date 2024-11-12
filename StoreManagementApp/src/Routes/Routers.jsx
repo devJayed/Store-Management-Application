@@ -14,13 +14,16 @@ import ManageProducts from "../Pages/Dashboard/Products/ManageProducts";
 import AllUsers from "../Pages/Dashboard/AllUsers/AllUsers";
 import Testing from "../Pages/Testing/Testing";
 // import Categories from "../Pages/Dashboard/Categories/Categories";
-import UpdateCategory from "../Pages/Dashboard/Category/UpdateCategory";
+// import UpdateCategory from "../Pages/Dashboard/Category/UpdateCategory"; No need, modal replaces
 import ManageCategory from "../Pages/Dashboard/Category/ManageCategory";
 import ManageSubcategory from "../Pages/Dashboard/Subcategory/ManageSubcategory";
 import UpdateSubcategory from "../Pages/Dashboard/Subcategory/UpdateSubcategory";
 import ManageSubsubCategory from "../Pages/Dashboard/SubsubCategory/ManageSubsubCategory";
 import UpdateSubsubCategory from "../Pages/Dashboard/SubsubCategory/UpdateSubsubCategory";
 import Sales from "../Pages/Dashboard/Sales/Sales";
+import SalesList from "../Pages/Dashboard/Sales/SalesList";
+import Customers from "../Pages/Dashboard/Customers/Customers";
+import UpdateProducts from "../Pages/Dashboard/Products/UpdateProducts";
 
 export const router = createBrowserRouter([
   {
@@ -79,6 +82,19 @@ export const router = createBrowserRouter([
         element: <ManageProducts></ManageProducts>,
       },
       {
+        path: "update-products/:id",
+        element: <UpdateProducts />,
+        loader: async ({ params }) => {
+          const response = await fetch(
+            `http://localhost:5005/products/${params.id}`
+          );
+          if (!response.ok) {
+            throw new Error("Failed to fetch the Products");
+          }
+          return response.json(); // Return the JSON data to the loader
+        },
+      },
+      {
         path: "users",
         element: <AllUsers></AllUsers>,
       },
@@ -95,18 +111,20 @@ export const router = createBrowserRouter([
         path: "manage-subsubcategory",
         element: <ManageSubsubCategory></ManageSubsubCategory>,
       },
+      // Update category, No need
       {
-        path: "update-category/:id",
-        element: <UpdateCategory />,
-        loader: async ({ params }) => {
-          const response = await fetch(
-            `http://localhost:5000/category/${params.id}`
-          );
-          if (!response.ok) {
-            throw new Error("Failed to fetch category");
-          }
-          return response.json(); // Return the JSON data to the loader
-        },
+        
+        // path: "update-category/:id",
+        // element: <UpdateCategory />,
+        // loader: async ({ params }) => {
+        //   const response = await fetch(
+        //     `http://localhost:5005/category/${params.id}`
+        //   );
+        //   if (!response.ok) {
+        //     throw new Error("Failed to fetch category");
+        //   }
+        //   return response.json(); // Return the JSON data to the loader
+        // },
       },
       {
         path: "manage-subcategory",
@@ -117,7 +135,7 @@ export const router = createBrowserRouter([
         element: <UpdateSubcategory />,
         loader: async ({ params }) => {
           const response = await fetch(
-            `http://localhost:5000/subcategory/${params.id}`
+            `http://localhost:5005/subcategory/${params.id}`
           );
           if (!response.ok) {
             throw new Error("Failed to fetch category");
@@ -134,7 +152,7 @@ export const router = createBrowserRouter([
         element: <UpdateSubsubCategory />,
         loader: async ({ params }) => {
           const response = await fetch(
-            `http://localhost:5000/subsubcategory/${params.id}`
+            `http://localhost:5005/subsubcategory/${params.id}`
           );
           if (!response.ok) {
             throw new Error("Failed to fetch category");
@@ -145,6 +163,14 @@ export const router = createBrowserRouter([
       {
         path: "sales",
         element: <Sales></Sales>,
+      },
+      {
+        path: "sales-list",
+        element: <SalesList></SalesList>,
+      },
+      {
+        path: "customers",
+        element: <Customers></Customers>,
       },
     ],
   },

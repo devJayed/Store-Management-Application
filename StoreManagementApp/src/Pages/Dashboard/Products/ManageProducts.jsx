@@ -6,18 +6,23 @@ import SectionTitle from "../../../Components/SectionTitle/SectionTitle";
 import { useQuery } from "@tanstack/react-query";
 import Swal from "sweetalert2";
 import useAxiosPublic from "../../../Hooks/useAxiosPublic";
+import { FaPlusSquare } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import Pagination from "../../../Components/Pagination/Pagination";
 
 const ManageProducts = () => {
   const axiosPublic = useAxiosPublic();
+  const navigate = useNavigate();
+
+  // Pagination state
+  const [currentItems, setCurrentItems] = useState([]);
+  const [pageCount, setPageCount] = useState(0);
+  const [itemOffset, setItemOffset] = useState(0);
+  const itemsPerPage = 10;
 
   // Fetch products when the component mounts
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  // Define the fetch function
   const fetchProducts = async () => {
-    const response = await fetch("http://localhost:5000/products");
+    const response = await fetch("http://localhost:5005/products");
     if (!response.ok) {
       throw new Error("Failed to fetch products");
     }
@@ -26,7 +31,7 @@ const ManageProducts = () => {
 
   // Use useQuery to fetch the data and handle loading and error states
   const {
-    data: products,
+    data: products = [], // default to an empty array
     isLoading,
     isError,
     error,
@@ -36,14 +41,44 @@ const ManageProducts = () => {
     queryFn: fetchProducts,
   });
 
+  // Sort products by subCategory, subsubCategory, and brand
+  useEffect(() => {
+    const sortedProducts = [...products].sort((a, b) => {
+      if (a.subCategory === b.subCategory) {
+        if (a.subsubCategory === b.subsubCategory) {
+          return a.brand.localeCompare(b.brand); // Sort by brand if subCategory and subsubCategory are the same
+        }
+        return a.subsubCategory.localeCompare(b.subsubCategory); // Sort by subsubCategory if subCategory is the same
+      }
+      return a.subCategory.localeCompare(b.subCategory); // Sort by subCategory first
+    });
+
+    setPageCount(Math.ceil(sortedProducts.length / itemsPerPage));
+    setCurrentItems(
+      sortedProducts.slice(itemOffset, itemOffset + itemsPerPage)
+    );
+  }, [products, itemOffset, itemsPerPage]);
+
+  // Handle pagination click
+  const handlePageClick = (event) => {
+    const newOffset = (event.selected * itemsPerPage) % products.length;
+    setItemOffset(newOffset);
+  };
+
   // Handle loading state
   if (isLoading) {
-    return <div className="text-3xl text-center mt-24">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-2 mt-12">
+        <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-blue-500 border-solid"></div>
+        <p className="text-blue-500 text-lg font-semibold">
+          Loading sales data...
+        </p>
+      </div>
+    );
   }
 
   // Handle Delete
   const handleDeleteItem = (item) => {
-    console.log(item);
     Swal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -56,7 +91,7 @@ const ManageProducts = () => {
       if (result.isConfirmed) {
         const res = await axiosPublic.delete(`/products/${item._id}`);
         if (res.data.deletedCount > 0) {
-          refetch(); // Refetch to update the UI
+          refetch();
           Swal.fire({
             position: "top-end",
             icon: "success",
@@ -71,20 +106,26 @@ const ManageProducts = () => {
 
   return (
     <div>
-      {/* Section Title */}
       <div>
         <SectionTitle
           subHeading="Manage your products"
           heading="Manage Products"
         />
       </div>
-      {/* Render product list */}
+      <div className="flex justify-start items-center ml-16">
+        <button
+          onClick={() => navigate("/dashboard/add-products")}
+          className="btn btn-primary"
+        >
+          Add New Product
+        </button>
+      </div>
       <div className="mx-16 mt-8 mb-4">
         <div className="overflow-x-auto">
           <table className="table w-full border border-gray-300">
-            {/* Table Head */}
             <thead className="text-center">
               <tr className="font-bold text-xl bg-gray-300 border border-gray-300">
+                <th className="border-r border-gray-400">Update</th>
                 <th className="border-r border-gray-400">#</th>
                 <th className="border-r border-gray-400">Category</th>
                 <th className="border-r border-gray-400">SubCategory</th>
@@ -92,7 +133,6 @@ const ManageProducts = () => {
                 <th className="border-r border-gray-400">Brand</th>
                 <th className="border-r border-gray-400">Product Code</th>
                 <th className="border-r border-gray-400">In Stock</th>
-                <th className="border-r border-gray-400">Product Quantity</th>
                 <th className="border-r border-gray-400">Stock Alert</th>
                 <th className="border-r border-gray-400">Cost at RMB</th>
                 <th className="border-r border-gray-400">RMB Rate</th>
@@ -104,31 +144,29 @@ const ManageProducts = () => {
               </tr>
             </thead>
             <tbody>
-              {products.map((item, index) => (
+              {currentItems.map((item, index) => (
                 <tr
                   key={item._id}
                   className={`${
                     index % 2 === 0 ? "bg-blue-50" : "bg-gray-50"
                   } border border-gray-300`}
                 >
+                  <td className="border border-gray-300">
+                    <Link to={`/dashboard/update-products/${item._id}`}>
+                      <button className="btn btn-ghost text-2xl text-orange-500">
+                        <FaPlusSquare />
+                      </button>
+                    </Link>
+                  </td>
                   <td className="border border-gray-300">{index + 1}</td>
-                  <td className="border border-gray-300">
-                    {item.category}
-                  </td>
-                  <td className="border border-gray-300">
-                    {item.subCategory}
-                  </td>
+                  <td className="border border-gray-300">{item.category}</td>
+                  <td className="border border-gray-300">{item.subCategory}</td>
                   <td className="border border-gray-300">
                     {item.subsubCategory}
                   </td>
                   <td className="border border-gray-300">{item.brand}</td>
                   <td className="border border-gray-300">{item.productCode}</td>
-                  <td className="border border-gray-300">
-                    {item.inStock}
-                  </td>
-                  <td className="border border-gray-300">
-                    {item.productQuantity}
-                  </td>
+                  <td className="border border-gray-300">{item.inStock}</td>
                   <td className="border border-gray-300">{item.stockAlert}</td>
                   <td className="border border-gray-300">{item.costRMB}</td>
                   <td className="border border-gray-300">{item.rmbRate}</td>
@@ -142,16 +180,7 @@ const ManageProducts = () => {
                   <td className="border border-gray-300">
                     {new Date(item.date).toLocaleDateString()}
                   </td>
-
-                  {/* Action buttons */}
                   <td className="flex">
-                    {/* Edit button */}
-                    <Link>
-                      <button className="btn btn-ghost text-2xl text-orange-500">
-                        <FaEdit />
-                      </button>
-                    </Link>
-                    {/* Delete button */}
                     <button
                       onClick={() => handleDeleteItem(item)}
                       className="btn btn-ghost text-2xl text-red-500"
@@ -164,6 +193,7 @@ const ManageProducts = () => {
             </tbody>
           </table>
         </div>
+        <Pagination pageCount={pageCount} onPageChange={handlePageClick} />
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ require("dotenv").config();
 //-------------------++++-----------------
 
 // Set the port
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5005;
 //-------------------++++-----------------
 //Middleware
 app.use(cors());
@@ -43,6 +43,9 @@ async function run() {
     const productCollection = client
       .db("storeManagementApp")
       .collection("products");
+    const salesRecordsCollection = client
+      .db("storeManagementApp")
+      .collection("salesRecords");
     // const categoryCollection = client
     //   .db("storeManagementApp")
     //   .collection("categories");
@@ -61,6 +64,12 @@ async function run() {
     const brandCollection = client
       .db("storeManagementApp")
       .collection("brands");
+    const customersCollection = client
+      .db("storeManagementApp")
+      .collection("customers");
+    const invoiceCollection = client
+      .db("storeManagementApp")
+      .collection("invoiceCounters");
 
     //-------------------++++-----------------
     // Function to generate a 7-digit productCode with prefix 'P'
@@ -75,34 +84,112 @@ async function run() {
     };
 
     // Product Cost Calculation
-    const productCostCalculation = async (
-      costRMB,
-      rmbRate,
-      transportCost,
-      productQuantity
-    ) => {
-      // Convert string values to numbers (float or integer)
-      const costRMBNum = parseFloat(costRMB);
-      const rmbRateNum = parseFloat(rmbRate);
-      const transportCostNum = parseFloat(transportCost);
-      const productQuantityNum = parseInt(productQuantity, 10); // Integer for quantity
+    // const productCostCalculation = async (costRMB, rmbRate, transportCost) => {
+    //   // Convert string values to numbers (float or integer)
+    //   const costRMBNum = parseFloat(costRMB);
+    //   const rmbRateNum = parseFloat(rmbRate);
+    //   const transportCostNum = parseFloat(transportCost);
 
-      // Debug: Check converted values
-      // console.log(costRMBNum, rmbRateNum, transportCostNum, productQuantityNum);
+    //   // Debug: Check converted values
+    //   // console.log(costRMBNum, rmbRateNum, transportCostNum);
 
-      // Perform the calculation
-      const result =
-        (costRMBNum * rmbRateNum + transportCostNum) * productQuantityNum;
+    //   // Perform the calculation
+    //   const result = ((costRMBNum * rmbRateNum + transportCostNum) * 1).toFixed(
+    //     2
+    //   );
 
-      return result;
+    //   return result;
+    // };
+    // Function to generate a unique invoice number
+    const getInvoiceNumber = async () => {
+      const date = new Date(); // Get the current date in local time
+      const datePart = date.toLocaleDateString("en-CA").replace(/-/g, ""); // Format YYYYMMDD
+
+      // Find or create a counter document for the current date
+      const counterDoc = await invoiceCollection.findOneAndUpdate(
+        { date: datePart }, // Query by date
+        { $inc: { sequence: 1 } }, // Increment sequence
+        { upsert: true, returnDocument: "after" } // Create if not exists, return updated document
+      );
+
+      // Extract the sequence from the updated document
+      const sequence = counterDoc.value?.sequence || 1; // Default to 1 if undefined
+
+      // Pad the sequence to 3 digits (e.g., 001, 002, etc.)
+      const sequencePart = String(sequence).padStart(3, "0");
+
+      // Return the invoice number in the format: INV-YYYYMMDD-SEQ
+      return `INV-${datePart}-${sequencePart}`;
     };
 
     //-------------------++++-----------------
+
+    //-------+++ Customers ++------------
+    // Create a new customer
+    app.post("/customers", async (req, res) => {
+      try {
+        const customer = req.body;
+        // console.log(customer);
+        const result = await customersCollection.insertOne(customer);
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Get all customers
+    app.get("/customers", async (req, res) => {
+      try {
+        const customers = await customersCollection.find().toArray();
+        res.send(customers);
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Update a customer
+    app.put("/customers/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updateData = req.body;
+        const result = await customersCollection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $set: updateData },
+          { returnOriginal: false } // Ensures that the updated document, not the original, is returned.
+        );
+        res.json(result.value);
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Delete a customer
+    app.delete("/customers/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await customersCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.json({ message: "Customer deleted" });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+    // ----------------------------------
 
     //-------+++ Products ++------------
     // Finding
     app.get("/products", async (req, res) => {
       const result = await productCollection.find().toArray();
+      res.send(result);
+    });
+    // Finding using id
+    app.get("/products/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      console.log(query);
+      const result = await productCollection.find(query).toArray();
+      console.log(result);
       res.send(result);
     });
     // Creating
@@ -115,11 +202,12 @@ async function run() {
           subsubCategory,
           brand,
           inStock,
-          productQuantity,
           stockAlert,
           costRMB,
           rmbRate,
           transportCost,
+          productCost,
+          productPrice,
           date,
         } = req.body;
 
@@ -128,16 +216,17 @@ async function run() {
         // console.log("Product Code", productCode);
 
         // Product Cost Calculation
-        const productCost = await productCostCalculation(
-          costRMB,
-          rmbRate,
-          transportCost,
-          productQuantity
-        );
+        // const productCost = await productCostCalculation(
+        //   costRMB,
+        //   rmbRate,
+        //   transportCost
+        // );
 
-        const productPrice = (parseInt(productCost) * 1.1).toFixed(2);
+        // const productPrice = parseFloat((parseFloat(productCost) * 1.1).toFixed(2)).toFixed(2);
 
         // console.log(productPrice);
+
+        // const inStock = parseInt(productQuantity);
 
         // Create the new product object
         const newProduct = {
@@ -146,15 +235,14 @@ async function run() {
           subsubCategory,
           brand,
           inStock,
-          productQuantity,
           stockAlert,
           costRMB,
           rmbRate,
           transportCost,
-          date,
-          productCode, // Assign generated product code here
           productCost,
           productPrice,
+          date,
+          productCode, // Assign generated product code here
         };
 
         // console.log(newProduct);
@@ -168,7 +256,6 @@ async function run() {
         res.status(500).send({ message: "Failed to add product" });
       }
     });
-
     // Deleting
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -176,6 +263,261 @@ async function run() {
       const result = await productCollection.deleteOne(query);
       res.send(result);
     });
+    // check-duplicate
+    app.post("/products/check-duplicate", async (req, res) => {
+      const { category, subCategory, subsubCategory, brand } = req.body;
+      try {
+        // Check for a product with the same category, subCategory, subsubCategory, and brand
+        const duplicate = await productCollection.findOne({
+          category,
+          subCategory,
+          subsubCategory,
+          brand,
+        });
+        // console.log(duplicate);
+
+        if (duplicate) {
+          return res
+            .status(200)
+            .json({ duplicate: true, message: "Product already exists" });
+        }
+        return res.status(200).json({ duplicate: false });
+      } catch (error) {
+        console.error("Error checking for duplicates:", error);
+        res.status(500).json({ error: "Server error" });
+      }
+    });
+    // Edit Product
+    app.patch("/product/:id", async (req, res) => {
+      const {
+        inStock,
+        productQuantity,
+        stockAlert,
+        costRMB,
+        rmbRate,
+        transportCost,
+        productCost,
+        productPrice,
+        date,
+      } = req.body;
+      // console.log(name, categoryName);
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      // Ensure inStock and productQuantity are numbers
+      console.log(parseInt(inStock, 10));
+      console.log(parseInt(productQuantity, 10));
+      const updatedInStock =
+        parseInt(inStock, 10) + parseInt(productQuantity, 10);
+      console.log(updatedInStock);
+      console.log(filter);
+      console.log(
+        inStock,
+        productQuantity,
+        stockAlert,
+        costRMB,
+        rmbRate,
+        transportCost,
+        productCost,
+        productPrice,
+        date
+      );
+      // console.log(filter);
+      const updateDoc = {
+        $set: {
+          inStock: updatedInStock,
+          stockAlert: stockAlert,
+          costRMB: costRMB,
+          rmbRate: rmbRate,
+          transportCost: transportCost,
+          productCost: productCost,
+          productPrice: productPrice,
+          date: date,
+        },
+      };
+      const result = await productCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    //-------------------++++-----------------
+
+    //---------------++ Sales ++--------------
+    // POST route to handle sales and update the product stock
+    app.post("/sale", async (req, res) => {
+      const { products, customer } = req.body;
+      console.log(customer);
+
+      try {
+        const invoiceNumber = await getInvoiceNumber(); // Generate the invoice number here
+        const bulkOperations = await Promise.all(
+          // Promise.all runs multiple asynchronous operations in parallel
+          products.map(async (product) => {
+            const foundProduct = await productCollection.findOne({
+              _id: new ObjectId(product._id),
+            });
+
+            let inStock = parseInt(foundProduct.inStock, 10);
+            if (isNaN(inStock)) {
+              console.error(`Invalid inStock for product ID ${product._id}`);
+              return null;
+            }
+
+            return {
+              updateOne: {
+                filter: { _id: new ObjectId(product._id) },
+                update: {
+                  $inc: { inStock: -parseInt(product.sellingAmount, 10) },
+                },
+              },
+            };
+          })
+        );
+
+        const validOperations = bulkOperations.filter(Boolean); //Filters out any null values from bulkOperations (from failed operations), leaving only valid operations.
+        if (validOperations.length === 0) {
+          return res
+            .status(400)
+            .send({ error: "No valid operations to perform." });
+        }
+
+        const stockUpdateResult = await productCollection.bulkWrite(
+          validOperations
+        );
+
+        // Record the sale in salesRecords collection
+        const saleRecord = {
+          customer: customer,
+          products: products.map((product) => ({
+            productId: product._id,
+            productName: `${product.subCategory} - ${product.subsubCategory}`,
+            quantity: product.sellingAmount,
+            price: product.productPrice,
+            total: product.productPrice * product.sellingAmount,
+          })),
+          invoiceNumber: invoiceNumber, // Save the unique invoice number
+          date: new Date(),
+          totalAmount: products.reduce(
+            (total, product) =>
+              total + product.productPrice * product.sellingAmount,
+            0
+          ),
+        };
+
+        const recordResult = await salesRecordsCollection.insertOne(saleRecord);
+
+        res.send({ stockUpdateResult, recordResult });
+      } catch (error) {
+        console.error("Error during sale operation:", error);
+        res
+          .status(500)
+          .send({ error: "Failed to complete sale and save record." });
+      }
+    });
+    // sales list all
+    app.get("/sales-list", async (req, res) => {
+      try {
+        const salesRecords = await salesRecordsCollection
+          .find(
+            {},
+            {
+              projection: {
+                customer: 1,
+                date: 1,
+                totalAmount: 1,
+                invoiceNumber: 1,
+              },
+            }
+          )
+          .toArray();
+
+        if (!salesRecords || salesRecords.length === 0) {
+          return res.status(404).json({ message: "No sales records found" });
+        }
+
+        res.status(200).json(salesRecords);
+      } catch (error) {
+        console.error("Error fetching sales records:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    });
+    // sales list single (id)
+    const { ObjectId } = require("mongodb");
+    //get specific sales for an id
+    app.get("/sales-list/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        console.log(id);
+        const query = { _id: new ObjectId(id) };
+
+        const salesRecord = await salesRecordsCollection.find(query).toArray();
+
+        if (!salesRecord || salesRecord.length === 0) {
+          return res.status(404).json({ message: "No sales record found" });
+        }
+
+        res.status(200).json(salesRecord);
+      } catch (error) {
+        console.error("Error fetching sales record:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    });
+    // Delete a sale
+    app.delete("/sales/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { specSalesProduct } = req.body;
+
+        const bulkOperations = await Promise.all(
+          // Process each product for stock adjustment
+          specSalesProduct.map(async (product) => {
+            console.log("product", product);
+            // Fetch only the inStock field for the product
+            const foundProduct = await productCollection.findOne(
+              { _id: new ObjectId(product.productId) }, // Match document by product ID
+              { projection: { inStock: 1 } } // Only retrieve the inStock field
+            );
+            console.log("Found Product", foundProduct);
+            // Access the inStock amount for the found product
+            let inStock = parseInt(foundProduct?.inStock, 10);
+            console.log("inStock", inStock);
+            if (isNaN(inStock)) {
+              console.error(
+                `Invalid inStock for product ID ${product?.productId}`
+              );
+              return null;
+            }
+
+            // Build the update operation for the bulk operation
+            return {
+              updateOne: {
+                filter: { _id: new ObjectId(product?.productId) }, // Use the correct field for the product ID
+                update: {
+                  $inc: { inStock: +parseInt(product?.quantity, 10) }, // Increment inStock based on quantity
+                },
+              },
+            };
+          })
+        );
+        const validOperations = bulkOperations.filter(Boolean); //Filters out any null values from bulkOperations (from failed operations), leaving only valid operations.
+        if (validOperations?.length === 0) {
+          return res
+            .status(400)
+            .send({ error: "No valid operations to perform." });
+        }
+
+        const stockUpdateResult = await productCollection.bulkWrite(
+          validOperations
+        );
+        //Delete the salesRecord
+        const query = { _id: new ObjectId(id) };
+        const result = await salesRecordsCollection.deleteOne(query);
+
+        res.send({ stockUpdateResult, result });
+      } catch (error) {
+        console.error("Error deleting sale:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    });
+
     //-------------------++++-----------------
 
     //-------------------++++-----------------
